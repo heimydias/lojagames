@@ -1,5 +1,6 @@
 package com.generation.lojagames.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -24,7 +26,7 @@ import com.generation.lojagames.repository.ProdutoRepository;
 import jakarta.validation.Valid;
 
 @RestController 
-@RequestMapping("/Produtos")
+@RequestMapping("/produtos")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class ProdutoController {
 	
@@ -54,9 +56,12 @@ public class ProdutoController {
 	
 	@PostMapping
 	public ResponseEntity<Produto>post(@Valid @RequestBody Produto produto){
-		return  ResponseEntity.status(HttpStatus.OK).body(produtoRepository.save(produto));
+		return categoriaRepository.findById(produto.getCategoria().getId())
+				.map(resposta -> ResponseEntity.status(HttpStatus.CREATED).body(produtoRepository.save(produto))) 
+			      .orElse(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
 	}
 	
+	@PutMapping
 	public ResponseEntity<Produto> put(@Valid @RequestBody Produto produto){
 		return produtoRepository.findById(produto.getId())
                 .map(resposta -> ResponseEntity.ok().body(produtoRepository.save(produto)))
@@ -68,9 +73,22 @@ public class ProdutoController {
 	public void delete(@PathVariable Long id) {
 		  Optional<Produto> produto = produtoRepository.findById(id);
 		  
-		  if(produto.isPresent())
-			  if(produto.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-		      produtoRepository.deleteById(id);
+		  if(produto.isPresent()) {
+			  produtoRepository.deleteById(id);
+		  }else {
+			   throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+			   
+		  }
+	}
+	
+	@GetMapping("/precoMenor/{preco}")
+	public ResponseEntity<List<Produto>> getByPrecoMenor(@PathVariable BigDecimal preco){
+		return ResponseEntity.ok(produtoRepository.findByPrecoGreaterThan(preco));
+	}
+	
+	@GetMapping("/precoMaior/{preco}")
+	public ResponseEntity<List<Produto>> getByPrecoMaior(@PathVariable BigDecimal preco){
+		return ResponseEntity.ok(produtoRepository.findByPrecoLessThanEqual(preco));
 	}
 	
 }
